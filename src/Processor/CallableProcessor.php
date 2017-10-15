@@ -12,6 +12,8 @@ declare(strict_types=1);
 
 namespace WeCodeIn\ErrorHandling\Processor;
 
+use Throwable;
+
 class CallableProcessor implements ProcessorInterface
 {
     protected $callable;
@@ -21,7 +23,7 @@ class CallableProcessor implements ProcessorInterface
         $this->callable = $callable;
     }
 
-    public function __invoke(\Throwable $throwable) : \Throwable
+    public function __invoke(Throwable $throwable) : Throwable
     {
         return ($this->callable)($throwable);
     }

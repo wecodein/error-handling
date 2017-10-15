@@ -56,5 +56,4 @@ final class AbstractHandlerTest extends TestCase
             ->method('registerListener');
         return $handler;
     }
-
 }

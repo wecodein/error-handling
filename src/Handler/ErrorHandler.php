@@ -13,17 +13,9 @@ declare(strict_types=1);
 namespace WeCodeIn\ErrorHandling\Handler;
 
 use Throwable;
-use WeCodeIn\ErrorHandling\Processor\ProcessorInterface;
 
 class ErrorHandler extends AbstractErrorHandler
 {
-    use ProcessableTrait;
-
-    public function __construct(ProcessorInterface ...$processors)
-    {
-        $this->setProcessors(...$processors);
-    }
-
     protected function handle(Throwable $throwable)
     {
         $this->process($throwable);

@@ -3,14 +3,14 @@
 namespace WeCodeIn\ErrorHandling\Handler\Tests;
 
 use Closure;
-use Exception;
 use phpmock\phpunit\PHPMock;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
+use RuntimeException;
 use Throwable;
 use WeCodeIn\ErrorHandling\Handler\ErrorHandler;
-use WeCodeIn\ErrorHandling\Handler\ExceptionHandler;
 use WeCodeIn\ErrorHandling\Handler\FatalErrorHandler;
+use WeCodeIn\ErrorHandling\Processor\CallableProcessor;
 use WeCodeIn\ErrorHandling\Processor\ProcessorInterface;
 
 final class FatalErrorHandlerTest extends TestCase
@@ -34,7 +34,7 @@ final class FatalErrorHandlerTest extends TestCase
             );
     }
 
-    public function testInvokesProcessorsStackOnFatalError()
+    public function testPassingThrowableThroughPipeline()
     {
         $reflectionClass = $this->getErrorHandlerReflectionClass();
         $this->getFunctionMock($reflectionClass->getNamespaceName(), 'error_get_last')
@@ -46,57 +46,22 @@ final class FatalErrorHandlerTest extends TestCase
                 'line' => 1
             ]);
 
-        $processor1 = $this->getMockForProcessor();
-        $processor1->expects($this->once())
-            ->method('__invoke')
-            ->willReturn($this->createMock(Exception::class));
+        $processors = [
+            new CallableProcessor(function () {
+                return new RuntimeException('New exception');
+            }),
+            new CallableProcessor(function (Throwable $throwable) {
+                $this->assertInstanceOf(RuntimeException::class, $throwable);
+                $this->assertSame('New exception', $throwable->getMessage());
 
-        $processor2 = $this->getMockForProcessor();
-        $processor2->expects($this->once())
-            ->method('__invoke')
-            ->willReturn($this->createMock(Exception::class));
-
-        $processors = [$processor1, $processor2];
-
-        $errorHandler = new FatalErrorHandler(10, ...$processors);
-        $errorHandler->register();
-
-        $this->triggerPHPShutdown();
-    }
-
-    public function testPassThrowableTroughStackOnFatalError()
-    {
-        $reflectionClass = $this->getErrorHandlerReflectionClass();
-        $this->getFunctionMock($reflectionClass->getNamespaceName(), 'error_get_last')
-            ->expects($this->any())
-            ->willReturn([
-                'type' => E_WARNING,
-                'message' => 'Error message',
-                'file' => 'file.php',
-                'line' => 1
-            ]);
-
-        $processor1 = $this->getMockForProcessor();
-        $processor1->expects($this->any())
-            ->method('__invoke')
-            ->willReturn($processor1WillReturn = $this->createMock(Exception::class));
-
-        $processor2 = $this->getMockForProcessor();
-        $processor2->expects($this->any())
-            ->method('__invoke')
-            ->willReturnCallback(function (Throwable $throwable) use (&$processor2WillReceive) {
-                $processor2WillReceive = $throwable;
                 return $throwable;
-            });
+            }),
+        ];
 
-        $processors = [$processor1, $processor2];
-
-        $errorHandler = new FatalErrorHandler(10, ...$processors);
+        $errorHandler = new FatalErrorHandler(10, $processors);
         $errorHandler->register();
 
         $this->triggerPHPShutdown();
-
-        $this->assertSame($processor1WillReturn, $processor2WillReceive);
     }
 
     public function testWhenRestoredNotInvokesProcessorsStackOnFatalError()
@@ -105,7 +70,7 @@ final class FatalErrorHandlerTest extends TestCase
         $processor->expects($this->never())
             ->method('__invoke');
 
-        $errorHandler = new FatalErrorHandler(10, $processor);
+        $errorHandler = new FatalErrorHandler(10, [$processor]);
         $errorHandler->register();
         $errorHandler->restore();
 

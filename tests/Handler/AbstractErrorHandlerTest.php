@@ -7,7 +7,6 @@ use phpmock\phpunit\PHPMock;
 use PHPUnit\Framework\TestCase;
 use PHPUnit_Framework_MockObject_MockObject;
 use ReflectionClass;
-use Throwable;
 use WeCodeIn\ErrorHandling\Handler\AbstractErrorHandler;
 
 final class AbstractErrorHandlerTest extends TestCase

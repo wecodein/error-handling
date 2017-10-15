@@ -7,8 +7,10 @@ use Exception;
 use phpmock\phpunit\PHPMock;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
+use RuntimeException;
 use Throwable;
 use WeCodeIn\ErrorHandling\Handler\ExceptionHandler;
+use WeCodeIn\ErrorHandling\Processor\CallableProcessor;
 use WeCodeIn\ErrorHandling\Processor\ProcessorInterface;
 
 final class ExceptionHandlerTest extends TestCase
@@ -52,47 +54,23 @@ final class ExceptionHandlerTest extends TestCase
         $handler->restore();
     }
 
-    public function testInvokeInvokesProcessorsStack()
+    public function testPassingThrowableThroughPipeline()
     {
-        $processor1 = $this->getMockForProcessor();
-        $processor1->expects($this->once())
-            ->method('__invoke')
-            ->willReturn($this->createMock(Exception::class));
+        $processors = [
+            new CallableProcessor(function () {
+                return new RuntimeException('New exception');
+            }),
+            new CallableProcessor(function (Throwable $throwable) {
+                $this->assertInstanceOf(RuntimeException::class, $throwable);
+                $this->assertSame('New exception', $throwable->getMessage());
 
-        $processor2 = $this->getMockForProcessor();
-        $processor2->expects($this->once())
-            ->method('__invoke')
-            ->willReturn($this->createMock(Exception::class));
-
-        $processors = [$processor1, $processor2];
-
-        $handler = new ExceptionHandler(...$processors);
-        $handler->register();
-        $handler(new Exception());
-    }
-
-    public function testInvokePassThrowableTroughStack()
-    {
-        $processor1 = $this->getMockForProcessor();
-        $processor1->expects($this->any())
-            ->method('__invoke')
-            ->willReturn($processor1WillReturn = $this->createMock(Exception::class));
-
-        $processor2 = $this->getMockForProcessor();
-        $processor2->expects($this->any())
-            ->method('__invoke')
-            ->willReturnCallback(function (Throwable $throwable) use (&$processor2WillReceive) {
-                $processor2WillReceive = $throwable;
                 return $throwable;
-            });
+            }),
+        ];
 
-        $processors = [$processor1, $processor2];
-
-        $handler = new ExceptionHandler(...$processors);
+        $handler = new ExceptionHandler($processors);
         $handler->register();
         $handler(new Exception());
-
-        $this->assertSame($processor1WillReturn, $processor2WillReceive);
     }
 
     protected function setErrorReporting(int $level) : int

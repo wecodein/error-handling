@@ -1,0 +1,48 @@
+{
+    "name": "wecodein/error-handling",
+    "description": "Robust and extensible error handling system for PHP",
+    "type": "library",
+    "license": "MIT",
+    "keywords": [
+        "wecodein",
+        "error-handling"
+    ],
+    "authors": [
+        {
+            "name": "Dusan Vejin",
+            "email": "dutekvejin@gmail.com",
+            "homepage": "https://github.com/dutekvejin"
+        }
+    ],
+    "require": {
+        "php": "^7.0"
+    },
+    "require-dev": {
+        "friendsofphp/php-cs-fixer": "^2.7",
+        "php-mock/php-mock-phpunit": "^2.0",
+        "phpunit/phpunit": "^6.4"
+    },
+    "autoload": {
+        "psr-4": {
+            "WeCodeIn\\ErrorHandling\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "WeCodeIn\\ErrorHandling\\Tests\\": "tests/"
+        }
+    },
+    "scripts": {
+        "test": "phpunit --colors=always",
+        "cs-fix": "php-cs-fixer fix --config=.php_cs",
+        "cs-check": "php-cs-fixer fix --config=.php_cs -v --diff --dry-run"
+    },
+    "config": {
+        "sort-packages": true
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-master": "1.0-dev"
+        }
+    }
+}

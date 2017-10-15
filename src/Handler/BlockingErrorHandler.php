@@ -14,7 +14,7 @@ namespace WeCodeIn\ErrorHandling\Handler;
 
 use Throwable;
 
-class ThrowableErrorHandler extends AbstractErrorHandler
+class BlockingErrorHandler extends AbstractErrorHandler
 {
     protected function handle(Throwable $throwable)
     {

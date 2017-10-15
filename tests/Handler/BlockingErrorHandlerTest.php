@@ -7,9 +7,9 @@ use phpmock\phpunit\PHPMock;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use Throwable;
-use WeCodeIn\ErrorHandling\Handler\ThrowableErrorHandler;
+use WeCodeIn\ErrorHandling\Handler\BlockingErrorHandler;
 
-final class ThrowableErrorHandlerTest extends TestCase
+final class BlockingErrorHandlerTest extends TestCase
 {
     use PHPMock;
 
@@ -32,7 +32,7 @@ final class ThrowableErrorHandlerTest extends TestCase
 
     public function testThrowsExceptionOnError()
     {
-        $errorHandler = new ThrowableErrorHandler();
+        $errorHandler = new BlockingErrorHandler();
         $errorHandler->register();
 
         $this->expectException(Throwable::class);
@@ -47,7 +47,7 @@ final class ThrowableErrorHandlerTest extends TestCase
 
     protected function getErrorHandlerReflectionClass()
     {
-        return new ReflectionClass(ThrowableErrorHandler::class);
+        return new ReflectionClass(BlockingErrorHandler::class);
     }
 
     protected function triggerPHPError()

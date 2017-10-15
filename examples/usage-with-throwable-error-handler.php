@@ -2,7 +2,7 @@
 
 use WeCodeIn\ErrorHandling\Handler\ExceptionHandler;
 use WeCodeIn\ErrorHandling\Handler\FatalErrorHandler;
-use WeCodeIn\ErrorHandling\Handler\ThrowableErrorHandler;
+use WeCodeIn\ErrorHandling\Handler\BlockingErrorHandler;
 use WeCodeIn\ErrorHandling\Processor\CallableProcessor;
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -17,7 +17,7 @@ $processor = new CallableProcessor(function (Throwable $throwable) : Throwable {
     return $throwable;
 });
 
-$errorHandler = new ThrowableErrorHandler();
+$errorHandler = new BlockingErrorHandler();
 $errorHandler->register();
 
 $exceptionHandler = new ExceptionHandler($processor);

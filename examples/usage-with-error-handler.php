@@ -3,6 +3,7 @@
 use WeCodeIn\ErrorHandling\Handler\ErrorHandler;
 use WeCodeIn\ErrorHandling\Handler\ExceptionHandler;
 use WeCodeIn\ErrorHandling\Handler\FatalErrorHandler;
+use WeCodeIn\ErrorHandling\Handler\HandlerAggregate;
 use WeCodeIn\ErrorHandling\Processor\CallableProcessor;
 
 require __DIR__ . '/../vendor/autoload.php';
@@ -17,13 +18,11 @@ $processor = new CallableProcessor(function (Throwable $throwable) : Throwable {
     return $throwable;
 });
 
-$errorHandler = new ErrorHandler($processor);
-$errorHandler->register();
-
-$exceptionHandler = new ExceptionHandler($processor);
-$exceptionHandler->register();
-
-$fatalErrorHandler = new FatalErrorHandler(20, $processor);
-$fatalErrorHandler->register();
+$handler = new HandlerAggregate(
+    new ErrorHandler($processor),
+    new ExceptionHandler($processor),
+    new FatalErrorHandler(20, $processor)
+);
+$handler->register();
 
 trigger_error('Error');

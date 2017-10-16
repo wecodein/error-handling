@@ -14,8 +14,13 @@ namespace WeCodeIn\ErrorHandling\Handler;
 
 use Throwable;
 
-class ThrowableErrorHandler extends AbstractErrorHandler
+final class ThrowableErrorHandler extends AbstractErrorHandler
 {
+    public function __construct()
+    {
+        parent::__construct();
+    }
+
     protected function handle(Throwable $throwable)
     {
         throw $throwable;

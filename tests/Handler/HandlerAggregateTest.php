@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace WeCodeIn\ErrorHandling\Handler\Tests;
+namespace WeCodeIn\ErrorHandling\Tests\Handler;
 
 use PHPUnit\Framework\TestCase;
 use WeCodeIn\ErrorHandling\Handler\HandlerAggregate;
 use WeCodeIn\ErrorHandling\Handler\HandlerInterface;
 
-class HandlerAggregateTest extends TestCase
+final class HandlerAggregateTest extends TestCase
 {
     public function testRegisteringMultipleHandlers()
     {

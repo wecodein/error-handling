@@ -1,9 +1,9 @@
 <?php
 
-namespace WeCodeIn\ErrorHandling\Handler\Tests;
+declare(strict_types=1);
 
-use Closure;
-use Exception;
+namespace WeCodeIn\ErrorHandling\Tests\Handler;
+
 use phpmock\phpunit\PHPMock;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
@@ -17,86 +17,95 @@ final class ExceptionHandlerTest extends TestCase
 {
     use PHPMock;
 
-    /** @var Closure */
-    protected $listener;
-
-    public function setUp()
-    {
-        $this->setErrorReporting(E_ALL);
-
-        $reflectionClass = $this->getExceptionHandlerReflectionClass();
-        $this->getFunctionMock($reflectionClass->getNamespaceName(), 'set_exception_handler')
-            ->expects($this->any())
-            ->willReturnCallback(
-                function ($callable) {
-                    $this->listener = $callable;
-                }
-            );
-    }
-
-    public function testRegistersListenerToStandardPHPExceptionHandler()
+    public function testRegistersListener()
     {
         $handler = new ExceptionHandler();
-        $handler->register();
 
-        $this->assertInternalType('callable', $this->listener);
-    }
-
-    public function testRestoresListenerFromStandardPHPExceptionHandler()
-    {
-        $handler = new ExceptionHandler();
-        $handler->register();
-
-        $reflectionClass = $this->getExceptionHandlerReflectionClass();
-        $this->getFunctionMock($reflectionClass->getNamespaceName(), 'restore_exception_handler')
+        $this->getMockForSetExceptionHandler($handler)
             ->expects($this->once());
 
+        $handler->register();
+    }
+
+    public function testRegistersListenerOnceWithConsecutiveRegisterCalls()
+    {
+        $handler = new ExceptionHandler();
+
+        $this->getMockForSetExceptionHandler($handler)
+            ->expects($this->once());
+
+        for ($i = 0; $i < 2; $i++) {
+            $handler->register();
+        }
+    }
+
+    public function testRestoresListener()
+    {
+        $handler = new ExceptionHandler();
+
+        $this->getMockForSetExceptionHandler($handler)
+            ->expects($this->any());
+        $this->getMockForRestoreExceptionHandler($handler)
+            ->expects($this->once());
+
+        $handler->register();
         $handler->restore();
+    }
+
+    public function testRestoresListenerOnceWithConsecutiveRestoreCalls()
+    {
+        $handler = new ExceptionHandler();
+
+        $this->getMockForSetExceptionHandler($handler)
+            ->expects($this->any());
+        $this->getMockForRestoreExceptionHandler($handler)
+            ->expects($this->once());
+
+        $handler->register();
+
+        for ($i = 0; $i < 2; $i++) {
+            $handler->restore();
+        }
     }
 
     public function testPassingThrowableThroughPipeline()
     {
-        $processors = [
-            new CallableProcessor(function () {
-                return new RuntimeException('New exception');
-            }),
-            new CallableProcessor(function (Throwable $throwable) {
-                $this->assertInstanceOf(RuntimeException::class, $throwable);
-                $this->assertSame('New exception', $throwable->getMessage());
+        error_reporting(E_ALL);
 
-                return $throwable;
+        $exceptionToReturn = new RuntimeException('New exception');
+
+        $processors = [
+            new CallableProcessor(function () use ($exceptionToReturn) {
+                return $exceptionToReturn;
+            }),
+            new CallableProcessor(function (Throwable $returnedThrowableFromPreviousProcessor) use ($exceptionToReturn) {
+                $this->assertSame($exceptionToReturn, $returnedThrowableFromPreviousProcessor);
+                return $returnedThrowableFromPreviousProcessor;
             }),
         ];
 
         $handler = new ExceptionHandler(...$processors);
+
+        $this->getMockForSetExceptionHandler($handler)
+            ->expects($this->any())
+            ->willReturnCallback(function (callable $callable) use (&$registeredExceptionHandler) {
+                $registeredExceptionHandler = $callable;
+            });
+
         $handler->register();
-        $handler(new Exception());
+
+        $registeredExceptionHandler(new RuntimeException('New exception'));
     }
 
-    protected function setErrorReporting(int $level) : int
+    protected function getMockForSetExceptionHandler(ExceptionHandler $handler)
     {
-        return error_reporting($level);
-    }
-
-    protected function getExceptionHandlerReflectionClass()
-    {
-        return new ReflectionClass(ExceptionHandler::class);
-    }
-
-    protected function getMockForSetExceptionHandler()
-    {
-        $reflectionClass = $this->getExceptionHandlerReflectionClass();
+        $reflectionClass = new ReflectionClass($handler);
         return $this->getFunctionMock($reflectionClass->getNamespaceName(), 'set_exception_handler');
     }
 
-    protected function getMockForRestoreExceptionHandler()
+    protected function getMockForRestoreExceptionHandler(ExceptionHandler $handler)
     {
-        $reflectionClass = $this->getExceptionHandlerReflectionClass();
+        $reflectionClass = new ReflectionClass($handler);
         return $this->getFunctionMock($reflectionClass->getNamespaceName(), 'restore_exception_handler');
-    }
-
-    protected function getMockForProcessor()
-    {
-        return $this->createMock(ProcessorInterface::class);
     }
 }

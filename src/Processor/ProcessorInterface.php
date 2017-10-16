@@ -12,7 +12,9 @@ declare(strict_types=1);
 
 namespace WeCodeIn\ErrorHandling\Processor;
 
+use Throwable;
+
 interface ProcessorInterface
 {
-    public function __invoke(\Throwable $throwable) : \Throwable;
+    public function __invoke(Throwable $throwable) : Throwable;
 }

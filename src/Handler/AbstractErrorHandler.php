@@ -15,7 +15,7 @@ namespace WeCodeIn\ErrorHandling\Handler;
 use ErrorException;
 use Throwable;
 
-abstract class AbstractErrorHandler extends AbstractHandler
+abstract class AbstractErrorHandler extends AbstractProcessingHandler
 {
     protected function registerListener()
     {

@@ -68,7 +68,7 @@ final class ExceptionHandlerTest extends TestCase
             }),
         ];
 
-        $handler = new ExceptionHandler($processors);
+        $handler = new ExceptionHandler(...$processors);
         $handler->register();
         $handler(new Exception());
     }

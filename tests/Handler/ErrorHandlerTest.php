@@ -47,7 +47,7 @@ final class ErrorHandlerTest extends TestCase
             }),
         ];
 
-        $handler = new ErrorHandler($processors);
+        $handler = new ErrorHandler(...$processors);
         $handler->register();
 
         $this->triggerPHPError();

@@ -14,12 +14,7 @@ abstract class AbstractProcessingHandler extends AbstractHandler
      */
     private $processors;
 
-    public function __construct(array $processors = [])
-    {
-        $this->setProcessors(...$processors);
-    }
-
-    private function setProcessors(ProcessorInterface ...$processors)
+    public function __construct(ProcessorInterface ...$processors)
     {
         $this->processors = $processors;
     }

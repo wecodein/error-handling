@@ -58,7 +58,7 @@ final class FatalErrorHandlerTest extends TestCase
             }),
         ];
 
-        $errorHandler = new FatalErrorHandler(10, $processors);
+        $errorHandler = new FatalErrorHandler(10, ...$processors);
         $errorHandler->register();
 
         $this->triggerPHPShutdown();
@@ -70,7 +70,7 @@ final class FatalErrorHandlerTest extends TestCase
         $processor->expects($this->never())
             ->method('__invoke');
 
-        $errorHandler = new FatalErrorHandler(10, [$processor]);
+        $errorHandler = new FatalErrorHandler(10, $processor);
         $errorHandler->register();
         $errorHandler->restore();
 

@@ -14,14 +14,15 @@ namespace WeCodeIn\ErrorHandling\Handler;
 
 use ErrorException;
 use Throwable;
+use WeCodeIn\ErrorHandling\Processor\ProcessorInterface;
 
 class FatalErrorHandler extends AbstractErrorHandler
 {
     private $allocatedMemory;
 
-    public function __construct(int $allocatedMemorySize, array $processors = [])
+    public function __construct(int $allocatedMemorySize, ProcessorInterface ...$processors)
     {
-        parent::__construct($processors);
+        parent::__construct(...$processors);
 
         $this->allocatedMemory = str_repeat(' ', 1024 * $allocatedMemorySize);
     }

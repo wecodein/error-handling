@@ -15,7 +15,7 @@ abstract class AbstractHttpEmitter extends AbstractEmitter
         return parent::__invoke($throwable);
     }
 
-    protected function sendHeaders() : void
+    protected function sendHeaders()
     {
         if (!isset($_SERVER["REQUEST_URI"]) || headers_sent()) {
             return;

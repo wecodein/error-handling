@@ -16,6 +16,7 @@ $queue->push(new EmitterProcessor());
 $queue->push(new BlackHoleProcessor());
 
 $handler = new BlockingErrorHandler(...$queue);
+$handler->setTerminateLevelMask(E_USER_ERROR);
 $handler->register();
 
-trigger_error('New error');
+trigger_error('New error', E_USER_ERROR);

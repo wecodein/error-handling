@@ -8,6 +8,18 @@ use Throwable;
 
 abstract class AbstractHttpEmitter extends AbstractEmitter
 {
+    /**
+     * @var int
+     */
+    protected $httpResponseCode;
+
+    public function __construct(bool $includeTrace = true, int $httpResponseCode = 500)
+    {
+        parent::__construct($includeTrace);
+
+        $this->httpResponseCode = $httpResponseCode;
+    }
+
     public function __invoke(Throwable $throwable) : Throwable
     {
         $this->sendHeaders();
@@ -17,13 +29,18 @@ abstract class AbstractHttpEmitter extends AbstractEmitter
 
     protected function sendHeaders()
     {
-        if (!isset($_SERVER["REQUEST_URI"]) || headers_sent()) {
+        if (!$this->canSendHeaders()) {
             return;
         }
 
-        http_response_code(500);
+        http_response_code($this->httpResponseCode);
 
         header("Content-Type: {$this->getContentType()}");
+    }
+
+    final protected function canSendHeaders() : bool
+    {
+        return !headers_sent() && isset($_SERVER["REQUEST_URI"]);
     }
 
     abstract protected function getContentType() : string;

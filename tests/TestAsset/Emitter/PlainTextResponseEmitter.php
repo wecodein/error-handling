@@ -7,7 +7,7 @@ namespace WeCodeIn\ErrorHandling\Tests\TestAsset\Emitter;
 use Throwable;
 use WeCodeIn\ErrorHandling\Emitter\AbstractHttpEmitter;
 
-final class PlainTextEmitter extends AbstractHttpEmitter
+final class PlainTextResponseEmitter extends AbstractHttpEmitter
 {
     protected function format(Throwable $throwable) : string
     {
@@ -17,7 +17,7 @@ final class PlainTextEmitter extends AbstractHttpEmitter
             $throwable->getMessage()
         );
 
-        if ($this->options['includeTrace']) {
+        if ($this->includeTrace) {
             $text .= "\n\n";
 
             $trace = $throwable->getTrace();

@@ -6,7 +6,7 @@ namespace WeCodeIn\ErrorHandling\Tests\Emitter;
 
 use PHPUnit\Framework\TestCase;
 use RuntimeException;
-use WeCodeIn\ErrorHandling\Tests\TestAsset\Emitter\PlainTextEmitter;
+use WeCodeIn\ErrorHandling\Tests\TestAsset\Emitter\PlainTextResponseEmitter;
 
 class EmitterTest extends TestCase
 {
@@ -16,11 +16,12 @@ class EmitterTest extends TestCase
         });
     }
 
+    /**
+     * @runInSeparateProcess
+     */
     public function testEmittingExceptionMessage()
     {
-        $emitter = new PlainTextEmitter([
-            'includeTrace' => false,
-        ]);
+        $emitter = new PlainTextResponseEmitter(false);
 
         $emitter(new RuntimeException('Something went wrong'));
 

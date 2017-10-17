@@ -5,7 +5,7 @@ declare(strict_types=1);
 namespace WeCodeIn\ErrorHandling\Tests\Emitter;
 
 use RuntimeException;
-use WeCodeIn\ErrorHandling\Tests\TestAsset\Emitter\PlainTextEmitter;
+use WeCodeIn\ErrorHandling\Tests\TestAsset\Emitter\PlainTextResponseEmitter;
 
 class HttpEmitterTest extends EmitterTest
 {
@@ -28,12 +28,10 @@ class HttpEmitterTest extends EmitterTest
      */
     public function testSettingHttpStatusCode()
     {
-        $emitter = new PlainTextEmitter([
-            'includeTrace' => false,
-        ]);
+        $emitter = new PlainTextResponseEmitter(false, 502);
 
         $emitter(new RuntimeException('Something went wrong'));
 
-        $this->assertSame(500, http_response_code());
+        $this->assertSame(502, http_response_code());
     }
 }

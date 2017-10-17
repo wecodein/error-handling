@@ -1,14 +1,14 @@
 <?php
 
-namespace WeCodeIn\ErrorHandling\Handler\Tests;
+declare(strict_types=1);
 
-use Closure;
+namespace WeCodeIn\ErrorHandling\Tests\Handler;
+
 use phpmock\phpunit\PHPMock;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use RuntimeException;
 use Throwable;
-use WeCodeIn\ErrorHandling\Handler\ErrorHandler;
 use WeCodeIn\ErrorHandling\Handler\FatalErrorHandler;
 use WeCodeIn\ErrorHandling\Processor\CallableProcessor;
 use WeCodeIn\ErrorHandling\Processor\ProcessorInterface;
@@ -17,83 +17,179 @@ final class FatalErrorHandlerTest extends TestCase
 {
     use PHPMock;
 
-    /** @var Closure */
-    protected $listener;
-
-    public function setUp()
+    public function testRegistersListener()
     {
-        $this->setErrorReporting(E_ALL);
+        $handler = new FatalErrorHandler();
 
-        $reflectionClass = $this->getErrorHandlerReflectionClass();
-        $this->getFunctionMock($reflectionClass->getNamespaceName(), 'register_shutdown_function')
-            ->expects($this->any())
-            ->willReturnCallback(
-                function ($callable) {
-                    $this->listener = $callable;
-                }
-            );
+        $this->getMockForRegisterShutdownFunction($handler)
+            ->expects($this->once());
+
+        $handler->register();
     }
 
-    public function testPassingThrowableThroughPipeline()
+    public function testRegistersListenerOnceWithConsecutiveRegisterCalls()
     {
-        $reflectionClass = $this->getErrorHandlerReflectionClass();
-        $this->getFunctionMock($reflectionClass->getNamespaceName(), 'error_get_last')
+        $handler = new FatalErrorHandler();
+
+        $this->getMockForRegisterShutdownFunction($handler)
+            ->expects($this->once());
+
+        for ($i = 0; $i < 2; $i++) {
+            $handler->register();
+        }
+    }
+
+    public function testRestoresListener()
+    {
+        $handler = new FatalErrorHandler();
+
+        $this->getMockForRegisterShutdownFunction($handler)
+            ->expects($this->any());
+
+        $handler->register();
+        $handler->restore();
+
+        $this->assertTrue(true);
+    }
+
+    public function testRespectsPHPErrorReporting()
+    {
+        error_reporting(E_ALL & ~E_USER_ERROR);
+
+        $processor = $this->createMock(ProcessorInterface::class);
+        $processor->expects($this->never())
+            ->method('__invoke');
+
+        $handler = new FatalErrorHandler(32, $processor);
+
+        $this->getMockForRegisterShutdownFunction($handler)
+            ->expects($this->any())
+            ->willReturnCallback(function (callable $callable) use (&$registeredShutdownFunction) {
+                $registeredShutdownFunction = $callable;
+            });
+
+        $this->getMockForErrorGetLastFunction($handler)
             ->expects($this->any())
             ->willReturn([
-                'type' => E_WARNING,
+                'type' => E_USER_ERROR,
                 'message' => 'Error message',
                 'file' => 'file.php',
                 'line' => 1
             ]);
 
-        $processors = [
-            new CallableProcessor(function () {
-                return new RuntimeException('New exception');
-            }),
-            new CallableProcessor(function (Throwable $throwable) {
-                $this->assertInstanceOf(RuntimeException::class, $throwable);
-                $this->assertSame('New exception', $throwable->getMessage());
+        $handler->register();
 
-                return $throwable;
+        // Fake shutdown
+        $registeredShutdownFunction();
+    }
+
+    public function testPassingThrowableThroughPipeline()
+    {
+        error_reporting(E_ALL);
+
+        $exceptionToReturn = new RuntimeException('New exception');
+
+        $processors = [
+            new CallableProcessor(function () use ($exceptionToReturn) {
+                return $exceptionToReturn;
+            }),
+            new CallableProcessor(function (Throwable $returnedThrowableFromPreviousProcessor) use ($exceptionToReturn) {
+                $this->assertSame($exceptionToReturn, $returnedThrowableFromPreviousProcessor);
+                return $returnedThrowableFromPreviousProcessor;
             }),
         ];
 
-        $errorHandler = new FatalErrorHandler(10, ...$processors);
-        $errorHandler->register();
+        $handler = new FatalErrorHandler(32, ...$processors);
 
-        $this->triggerPHPShutdown();
+        $this->getMockForRegisterShutdownFunction($handler)
+            ->expects($this->any())
+            ->willReturnCallback(function (callable $callable) use (&$registeredShutdownFunction) {
+                $registeredShutdownFunction = $callable;
+            });
+
+        $this->getMockForErrorGetLastFunction($handler)
+            ->expects($this->any())
+            ->willReturn([
+                'type' => E_USER_ERROR,
+                'message' => 'Error message',
+                'file' => 'file.php',
+                'line' => 1
+            ]);
+
+        $handler->register();
+
+        // Fake shutdown
+        $registeredShutdownFunction();
     }
 
-    public function testWhenRestoredNotInvokesProcessorsStackOnFatalError()
+    public function testNotProcessingPipelineWhenRestored()
     {
-        $processor = $this->getMockForProcessor();
+        error_reporting(E_ALL);
+
+        $processor = $this->createMock(ProcessorInterface::class);
         $processor->expects($this->never())
             ->method('__invoke');
 
-        $errorHandler = new FatalErrorHandler(10, $processor);
-        $errorHandler->register();
-        $errorHandler->restore();
+        $handler = new FatalErrorHandler(32, $processor);
 
-        $this->triggerPHPShutdown();
+        $this->getMockForRegisterShutdownFunction($handler)
+            ->expects($this->any())
+            ->willReturnCallback(function (callable $callable) use (&$registeredShutdownFunction) {
+                $registeredShutdownFunction = $callable;
+            });
+
+        $this->getMockForErrorGetLastFunction($handler)
+            ->expects($this->any())
+            ->willReturn([]);
+
+        $handler->register();
+        $handler->restore();
+
+        // Fake shutdown
+        $registeredShutdownFunction();
     }
 
-    protected function setErrorReporting(int $level) : int
+    public function testNotProcessingPipelineWhenRestoredOnError()
     {
-        return error_reporting($level);
+        error_reporting(E_ALL);
+
+        $processor = $this->createMock(ProcessorInterface::class);
+        $processor->expects($this->never())
+            ->method('__invoke');
+
+        $handler = new FatalErrorHandler(32, $processor);
+
+        $this->getMockForRegisterShutdownFunction($handler)
+            ->expects($this->any())
+            ->willReturnCallback(function (callable $callable) use (&$registeredShutdownFunction) {
+                $registeredShutdownFunction = $callable;
+            });
+
+        $this->getMockForErrorGetLastFunction($handler)
+            ->expects($this->any())
+            ->willReturn([
+                'type' => E_USER_ERROR,
+                'message' => 'Error message',
+                'file' => 'file.php',
+                'line' => 1
+            ]);
+
+        $handler->register();
+        $handler->restore();
+
+        // Fake shutdown
+        $registeredShutdownFunction();
     }
 
-    protected function getErrorHandlerReflectionClass()
+    private function getMockForRegisterShutdownFunction(FatalErrorHandler $handler)
     {
-        return new ReflectionClass(ErrorHandler::class);
+        $reflectionClass = new ReflectionClass($handler);
+        return $this->getFunctionMock($reflectionClass->getNamespaceName(), 'register_shutdown_function');
     }
 
-    protected function getMockForProcessor()
+    private function getMockForErrorGetLastFunction(FatalErrorHandler $handler)
     {
-        return $this->createMock(ProcessorInterface::class);
-    }
-
-    protected function triggerPHPShutdown()
-    {
-        ($this->listener)();
+        $reflectionClass = new ReflectionClass($handler);
+        return $this->getFunctionMock($reflectionClass->getNamespaceName(), 'error_get_last');
     }
 }

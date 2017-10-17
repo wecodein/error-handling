@@ -1,57 +1,103 @@
 <?php
 
-namespace WeCodeIn\ErrorHandling\Handler\Tests;
+declare(strict_types=1);
 
-use Closure;
+namespace WeCodeIn\ErrorHandling\Tests\Handler;
+
+use ErrorException;
 use phpmock\phpunit\PHPMock;
 use PHPUnit\Framework\TestCase;
 use ReflectionClass;
-use Throwable;
 use WeCodeIn\ErrorHandling\Handler\ThrowableErrorHandler;
 
 final class ThrowableErrorHandlerTest extends TestCase
 {
     use PHPMock;
 
-    /** @var Closure */
-    protected $listener;
-
-    public function setUp()
+    public function testRegistersListener()
     {
-        $this->setErrorReporting(E_ALL);
+        $handler = new ThrowableErrorHandler();
 
-        $reflectionClass = $this->getErrorHandlerReflectionClass();
-        $this->getFunctionMock($reflectionClass->getNamespaceName(), 'set_error_handler')
-            ->expects($this->any())
-            ->willReturnCallback(
-                function ($callable) {
-                    $this->listener = $callable;
-                }
-            );
+        $this->getMockForSetErrorHandler($handler)
+            ->expects($this->once());
+
+        $handler->register();
     }
 
-    public function testThrowsExceptionOnError()
+    public function testRegistersListenerOnceWithConsecutiveRegisterCalls()
     {
-        $errorHandler = new ThrowableErrorHandler();
-        $errorHandler->register();
+        $handler = new ThrowableErrorHandler();
 
-        $this->expectException(Throwable::class);
+        $this->getMockForSetErrorHandler($handler)
+            ->expects($this->once());
 
-        $this->triggerPHPError();
+        for ($i = 0; $i < 2; $i++) {
+            $handler->register();
+        }
     }
 
-    protected function setErrorReporting(int $level) : int
+    public function testRestoresListener()
     {
-        return error_reporting($level);
+        $handler = new ThrowableErrorHandler();
+
+        $this->getMockForSetErrorHandler($handler)
+            ->expects($this->any());
+        $this->getMockForRestoreErrorHandler($handler)
+            ->expects($this->once());
+
+        $handler->register();
+        $handler->restore();
     }
 
-    protected function getErrorHandlerReflectionClass()
+    public function testRestoresListenerOnceWithConsecutiveRestoreCalls()
     {
-        return new ReflectionClass(ThrowableErrorHandler::class);
+        $handler = new ThrowableErrorHandler();
+
+        $this->getMockForSetErrorHandler($handler)
+            ->expects($this->any());
+        $this->getMockForRestoreErrorHandler($handler)
+            ->expects($this->once());
+
+        $handler->register();
+
+        for ($i = 0; $i < 2; $i++) {
+            $handler->restore();
+        }
     }
 
-    protected function triggerPHPError()
+    public function testRespectsPHPErrorReporting()
     {
-        ($this->listener)(E_WARNING, 'Error message', 'file.php', 1);
+        error_reporting(E_ALL & ~E_USER_ERROR);
+
+        $handler = new ThrowableErrorHandler();
+        $handler->register();
+
+        trigger_error('Error message', E_USER_ERROR);
+
+        $this->assertTrue(true);
+    }
+
+    public function testThrowsErrorException()
+    {
+        error_reporting(E_ALL);
+
+        $handler = new ThrowableErrorHandler();
+        $handler->register();
+
+        $this->expectException(ErrorException::class);
+
+        trigger_error('Error message', E_USER_ERROR);
+    }
+
+    protected function getMockForSetErrorHandler(ThrowableErrorHandler $handler)
+    {
+        $reflectionClass = new ReflectionClass($handler);
+        return $this->getFunctionMock($reflectionClass->getNamespaceName(), 'set_error_handler');
+    }
+
+    protected function getMockForRestoreErrorHandler(ThrowableErrorHandler $handler)
+    {
+        $reflectionClass = new ReflectionClass($handler);
+        return $this->getFunctionMock($reflectionClass->getNamespaceName(), 'restore_error_handler');
     }
 }

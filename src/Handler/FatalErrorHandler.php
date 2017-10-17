@@ -20,7 +20,7 @@ class FatalErrorHandler extends AbstractErrorHandler
 {
     private $allocatedMemory;
 
-    public function __construct(int $allocatedMemorySize, ProcessorInterface ...$processors)
+    public function __construct(int $allocatedMemorySize = 32, ProcessorInterface ...$processors)
     {
         parent::__construct(...$processors);
 

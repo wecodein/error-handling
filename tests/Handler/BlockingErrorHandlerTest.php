@@ -9,17 +9,20 @@ use PHPUnit\Framework\TestCase;
 use ReflectionClass;
 use RuntimeException;
 use Throwable;
-use WeCodeIn\ErrorHandling\Handler\ErrorHandler;
+use WeCodeIn\ErrorHandling\Handler\BlockingErrorHandler;
 use WeCodeIn\ErrorHandling\Processor\CallableProcessor;
 use WeCodeIn\ErrorHandling\Processor\ProcessorInterface;
 
-final class ErrorHandlerTest extends TestCase
+/**
+ * @runTestsInSeparateProcesses
+ */
+final class BlockingErrorHandlerTest extends TestCase
 {
     use PHPMock;
 
     public function testRegistersListener()
     {
-        $handler = new ErrorHandler();
+        $handler = new BlockingErrorHandler();
 
         $this->getMockForSetErrorHandler($handler)
             ->expects($this->once());
@@ -29,7 +32,7 @@ final class ErrorHandlerTest extends TestCase
 
     public function testRegistersListenerOnceWithConsecutiveRegisterCalls()
     {
-        $handler = new ErrorHandler();
+        $handler = new BlockingErrorHandler();
 
         $this->getMockForSetErrorHandler($handler)
             ->expects($this->once());
@@ -41,7 +44,7 @@ final class ErrorHandlerTest extends TestCase
 
     public function testRestoresListener()
     {
-        $handler = new ErrorHandler();
+        $handler = new BlockingErrorHandler();
 
         $this->getMockForSetErrorHandler($handler)
             ->expects($this->any());
@@ -54,7 +57,7 @@ final class ErrorHandlerTest extends TestCase
 
     public function testRestoresListenerOnceWithConsecutiveRestoreCalls()
     {
-        $handler = new ErrorHandler();
+        $handler = new BlockingErrorHandler();
 
         $this->getMockForSetErrorHandler($handler)
             ->expects($this->any());
@@ -76,7 +79,8 @@ final class ErrorHandlerTest extends TestCase
         $processor->expects($this->never())
             ->method('__invoke');
 
-        $handler = new ErrorHandler($processor);
+        $handler = new BlockingErrorHandler($processor);
+        $handler->setTerminateLevelMask(0);
         $handler->register();
 
         trigger_error('Error message', E_USER_ERROR);
@@ -98,19 +102,33 @@ final class ErrorHandlerTest extends TestCase
             }),
         ];
 
-        $handler = new ErrorHandler(...$processors);
+        $handler = new BlockingErrorHandler(...$processors);
+        $handler->setTerminateLevelMask(0);
         $handler->register();
 
         trigger_error('Error message', E_USER_ERROR);
     }
 
-    protected function getMockForSetErrorHandler(ErrorHandler $handler)
+    public function testTerminatesScript()
+    {
+        error_reporting(E_ALL);
+
+        $handler = new BlockingErrorHandler();
+        $handler->setTerminateLevelMask(E_USER_ERROR);
+        $handler->register();
+
+        trigger_error('Error message', E_USER_ERROR);
+
+        $this->fail('Failed asserting that handler terminated script.');
+    }
+
+    protected function getMockForSetErrorHandler(BlockingErrorHandler $handler)
     {
         $reflectionClass = new ReflectionClass($handler);
         return $this->getFunctionMock($reflectionClass->getNamespaceName(), 'set_error_handler');
     }
 
-    protected function getMockForRestoreErrorHandler(ErrorHandler $handler)
+    protected function getMockForRestoreErrorHandler(BlockingErrorHandler $handler)
     {
         $reflectionClass = new ReflectionClass($handler);
         return $this->getFunctionMock($reflectionClass->getNamespaceName(), 'restore_error_handler');
